@@ -1,23 +1,46 @@
-HelloView = require './atom-blame-view'
+BlameView = require './atom-blame-view'
+
+spawn = require('child_process').spawn
 
 module.exports =
-  atomBlameView: null
 
-  activate: (state) ->
-    atom.workspaceView.command "atom-blame:toggle", => @blame()
+  activate: ->
+    @blameView = null
+    atom.workspaceView.command "atom-blame:run", => @run()
 
   deactivate: ->
-    @atomBlameView.destroy()
+    @blameView.destroy()
 
-  serialize: ->
-    atomBlameViewState: @atomBlameView.serialize()
+  run: ->
+    if not @blameView? or atom.workspaceView.find('.atom-blame').size() == 0
+      @blameView = new BlameView
+    atom.workspaceView.find('.editor').append(@blameView)
+
+    @blame()
 
   blame: ->
-    # comment
-    # editor = atom.workspace.activePaneItem
-    # editor.insertText("Hello, world")
-    # atomBlameView = new HelloView(greeting: "Hi there")
-    atom.workspaceView.find('.editor').append(new HelloView(greeting: "Hi there"))
+    editor = atom.workspace.getActiveEditor()
+    return unless editor?
 
-    git = atom.project.getRepo()
-    console.log git.getOriginUrl()
+    path = editor.getPath()
+
+    cmd = 'git blame'
+    args = [path]
+
+    @child = spawn('git', ['blame', path, '-p'], cwd: atom.project.path )
+
+    @child.stdout.on 'data', (data) =>
+      @blameView.append(data, 'stdout')
+      @blameView.scrollToBottom()
+      console.log('stdout: ' + data)
+
+    @child.stderr.on 'data', (data) =>
+      @blameView.append(data, 'stderr')
+      console.log('stderr: ' + data)
+
+    @child.on 'close', (code, signal) =>
+      @child = null
+
+    unless editor.getPath()?
+      @child.stdin.write(editor.getText())
+    @child.stdin.end()

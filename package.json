@@ -3,7 +3,7 @@
   "main": "./lib/atom-blame",
   "version": "0.0.0",
   "description": "A short description of your package",
-  "activationEvents": ["atom-blame:toggle"],
+  "activationEvents": ["atom-blame:run"],
   "repository": "https://github.com/atom/atom-blame",
   "license": "MIT",
   "engines": {
